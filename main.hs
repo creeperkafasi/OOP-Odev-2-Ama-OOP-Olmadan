@@ -3,6 +3,7 @@ import Common
 import GHC.Debug (debugLn)
 import Data.List (sort, find)
 import Text.Printf (printf)
+import GHC.Base (eqInt)
 
 parseMetadata :: String -> IO (Int, Int)
 parseMetadata line = do
@@ -39,23 +40,50 @@ calculateBill :: [Course] -> Int -> Int
 calculateBill courses pricePerCredit = 
   sum $ map ((pricePerCredit *) . creditHours) courses
 
+totalCredits :: [Course] -> Int
+totalCredits = sum . map creditHours
+
+calculateGPA :: Student -> Float
+calculateGPA student = 
+    (sum . map (\c -> (fromIntegral.creditHours) c * (points.grade) c)) (courses student)
+    / fromIntegral (totalCredits $ courses student)
+  where
+    points :: Grade -> Float
+    points A = 4.0
+    points B = 3.0
+    points C = 2.0
+    points D = 1.0
+    points E = 0.0
+    points F = 0.0
+  
+
 printStudent :: Int -> Student -> IO ()
 printStudent pricePerCredit student = do
-  putStrLn "--------------------"
-  putStrLn $ name student <> " - " <> show (idNumber student)
+  putStrLn $ replicate 60 '='
+  putStrLn $ "Student Name: " <> name student
+  putStrLn $ "Student ID: " <> show (idNumber student)
+  putStrLn $ "Number of courses enrolled: " <> (show.length.courses) student
   if tuitionPaid student then (do
       putStrLn "Tuition unpaid, grades are withdrawn"
       printf "Bill: %d₺\n" (calculateBill (courses student) pricePerCredit)
     )
-  else mapM_ 
-    (\course -> do
-      putStrLn (
-           courseNo course           <> " "
-        <> courseName course         <> " " 
-        <> show (creditHours course) <> " "
-        <> show (grade course)              )
-    )
-    (courses student)
+  else do
+    (putStrLn . unwords)
+        [ fitWidth "Course No" 10, "|"
+        , fitWidth "Course Name" 25, "|"
+        , fitWidth "Credits" 9, "|"
+        , fitWidth "Grade" 8 ]
+    putStrLn $ replicate 60 '-'
+    mapM_ (\course -> do
+      (putStrLn . unwords)
+        [ fitWidth (courseNo course) 10, "|"
+        , fitWidth (courseName course) 25, "|"
+        , fitWidth (show (creditHours course)) 9, "|"
+        , fitWidth (show (grade course)) 8 ]
+      )
+      (courses student)
+    putStrLn ("Total number of credits: " <> (show . totalCredits . courses) student)
+    putStrLn ("Mid-Semester GPA: " <> (show . (*) 0.01 . fromIntegral . round . (100 *) . calculateGPA) student)
 
 getArgs' :: IO (String, Maybe Int )
 getArgs' = do
@@ -77,6 +105,6 @@ main = do
   students <- readFile inputFile >>= parseStudents
   case studentNumber of
     Nothing -> mapM_ (printStudent pricePerCredit) students
-    Just id -> case find (( id == ) . idNumber) students of
-      Nothing -> printf "Student with id %d not found" id
+    Just id -> case find (eqInt id . idNumber) students of
+      Nothing -> putStrLn $ "Student with id " <> show id <> " not found"
       Just student -> printStudent pricePerCredit student

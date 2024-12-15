@@ -41,3 +41,12 @@ pickFromListN list n = do
   (picked, remaining) <- pickFromList list
   rest <- pickFromListN remaining (n-1)
   return (picked : rest)
+
+fitWidth :: String -> Int -> String
+fitWidth text width = 
+       replicate leftPadding ' ' 
+    <> take width text
+    <> replicate rightPadding ' ' 
+  where
+    leftPadding = div (width - length text) 2
+    rightPadding = width - length text - leftPadding
