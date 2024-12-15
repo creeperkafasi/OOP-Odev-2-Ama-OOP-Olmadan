@@ -1,6 +1,7 @@
 module Common where
 import System.Random (randomRIO)
 import Data.List (intercalate)
+import Data.Function (on)
 
 data Grade = 
     F | E | D | C | B | A
@@ -11,14 +12,20 @@ data Course = Course
     , courseNo     :: String
     , creditHours  :: Int
     , grade        :: Grade}
-    deriving Show
+    deriving (Show, Eq)
+
+instance Ord Course where
+  compare = compare `on` courseNo
 
 data Student = Student
   { name        :: String
   , idNumber    :: Int
   , tuitionPaid :: Bool
   , courses     :: [Course] }
-  deriving Show
+  deriving (Show, Eq)
+
+instance Ord Student where
+  compare = compare `on` idNumber
 
 pickFromList :: [t] -> IO (t, [t])
 pickFromList list =
